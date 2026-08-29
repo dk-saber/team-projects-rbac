@@ -54,5 +54,11 @@ app.get('/', (req, res) => {
   res.send('JWT Auth API running');
 });
 
+// Utilisé par les sondes liveness/readiness (Kubernetes, load balancers, etc.).
+// Volontairement minimal : pas de dépendance DB pour rester rapide et fiable.
+app.get('/healthz', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
