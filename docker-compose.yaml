@@ -1,0 +1,88 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: jwt-mongo
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+# Fake SMTP server that captures emails locally without ever sending them
+# to the Internet. This bypasses outbound network restrictions in sandbox
+# environments such as Killercoda. Emails sent by the API can be viewed
+# through a web interface on port 8025.
+  mailhog:
+    image: mailhog/mailhog
+    container_name: jwt-mailhog
+    restart: unless-stopped
+    ports:
+      - "8025:8025"
+
+  api:
+    build:
+      context: ./jwt-project-manager-rbac
+      dockerfile: Dockerfile
+    container_name: jwt-auth-api
+    restart: unless-stopped
+    command: sh -c "node scripts/seed.js && npm start"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    ports:
+      - "5000:5000"
+    environment:
+      PORT: 5000
+      NODE_ENV: production
+# "*" allows any origin. This is convenient here because browser traffic
+# passes through the internal Nitro proxy (the "web" service), which
+# forwards requests server-to-server to this API while preserving the
+# original Origin header (the dynamically generated Killercoda domain,
+# which is therefore impossible to predict in advance). Direct external
+# traffic to this service remains internal to the Docker network anyway.
+      CORS_ORIGIN: "*"
+      MONGO_URI: mongodb://mongo:27017/jwt-refresh-demo
+
+      JWT_SECRET: change-me
+      JWT_EXPIRES_IN: 15m
+      REFRESH_TOKEN_SECRET: change-me-too
+      REFRESH_TOKEN_TTL_SEC: 604800
+
+      # RPassword reset
+      FRONTEND_URL: http://localhost:3000
+      PASSWORD_RESET_TTL_SEC: 900
+
+# Internal SMTP service (MailHog): no credentials required and no Internet
+# access needed. "mailhog" is resolved through the internal Docker network
+# automatically created by this docker-compose setup.
+      SMTP_HOST: mailhog
+      SMTP_PORT: 1025
+      SMTP_SECURE: "false"
+      MAIL_FROM: no-reply@example.com
+
+  web:
+    build:
+      context: ./nuxt-express-rbac
+      dockerfile: Dockerfile
+      args:
+# Forces the relative path "/api" (instead of the Dockerfile's default
+# value "http://localhost:5000/api"). With "/api", the browser sends
+# requests to the same domain as the page (for example, the Killercoda
+# domain), and the Nuxt/Nitro server forwards them internally to the
+# Docker service "api:5000" through the "routeRules" configuration in
+# nuxt.config.ts.
+# "localhost:5000" would not work because, in the user's browser,
+# "localhost" refers to the user's own machine, not the VM.
+        NUXT_PUBLIC_API_BASE: /api
+    container_name: jwt-auth-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "3000:3000"
+
+volumes:
+  mongo-data:

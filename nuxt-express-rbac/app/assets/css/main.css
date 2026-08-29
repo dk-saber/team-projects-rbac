@@ -1,0 +1,106 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-ink-950 text-slate-200 font-body antialiased;
+}
+
+::selection {
+  @apply bg-teal-500/30 text-white;
+}
+
+/* Scrollbar discret, cohérent avec le thème "coffre" */
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-ink-950;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-ink-600 rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-ink-500;
+}
+
+/* Focus clavier toujours visible */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid theme('colors.gold.400');
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+.bg-grid {
+  background-image: theme('backgroundImage.grid');
+  background-size: theme('backgroundSize.grid');
+}
+
+/* --------------------------------------------------------------------
+   Tableaux de données ("modern data table") — utilisés par Projets,
+   et les listes Users / Directions / Departments / Roles de l'Admin.
+   Centralisé ici pour que les quatre écrans restent visuellement
+   identiques sans dupliquer les classes partout.
+-------------------------------------------------------------------- */
+.dtable-shell {
+  @apply overflow-hidden rounded-2xl border border-ink-600 bg-ink-800/40 shadow-panel;
+}
+
+.dtable {
+  @apply w-full border-collapse text-left text-sm;
+}
+
+.dtable thead {
+  @apply bg-ink-900/80 backdrop-blur;
+}
+
+.dtable th {
+  @apply sticky top-0 whitespace-nowrap px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-slate-500;
+}
+
+.dtable tbody tr {
+  @apply border-t border-ink-700/70 transition-colors hover:bg-ink-700/30;
+}
+
+.dtable td {
+  @apply px-4 py-3.5 align-middle text-slate-200;
+}
+
+.dtable-empty {
+  @apply px-6 py-14 text-center text-sm text-slate-500;
+}
+
+.dtable-avatar {
+  @apply flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ink-700 font-mono text-xs font-semibold text-teal-300 ring-1 ring-inset ring-ink-600;
+}
+
+.dtable-action-btn {
+  @apply inline-flex items-center gap-1.5 rounded-md border border-ink-600 px-2.5 py-1.5 text-xs text-slate-300 transition hover:border-teal-500/40 hover:bg-teal-500/10 hover:text-teal-300;
+}
+
+.dtable-action-btn.danger {
+  @apply hover:border-rust-500/40 hover:bg-rust-500/10 hover:text-rust-400;
+}
