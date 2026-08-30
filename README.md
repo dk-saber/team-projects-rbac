@@ -14,6 +14,7 @@ Authentication is built on short-lived JWT access tokens paired with rotating, H
 - [Environment Variables](#environment-variables)
 - [Default Admin Account](#default-admin-account)
 - [Common Operations](#common-operations)
+- [Deploying to Kubernetes](#deploying-to-kubernetes)
 - [Troubleshooting](#troubleshooting)
 - [API Reference](#api-reference)
 
@@ -25,8 +26,8 @@ The stack is composed of five services, all orchestrated by a single `docker-com
 |-----------|-----------------------------|-----------------------------------------------------------|
 | `mongo`   | `mongo:7`                   | Primary database (users, roles, directions, departments, projects, refresh tokens) |
 | `mailhog` | `mailhog/mailhog`           | Local fake SMTP server — captures password-reset emails without sending them anywhere, viewable at `http://localhost:8025` |
-| `api`     | Built from `./jwtRefreshToken-be` | Express REST API — auth, RBAC, projects, admin console backend |
-| `web`     | Built from `./jwtRefreshToken-fe` | Nuxt 4 frontend — server-rendered, proxies `/api/**` to the `api` service internally |
+| `api`     | Built from `./jwt-project-manager-rbac` | Express REST API — auth, RBAC, projects, admin console backend |
+| `web`     | Built from `./nuxt-express-rbac` | Nuxt 4 frontend — server-rendered, proxies `/api/**` to the `api` service internally |
 
 Browser traffic only ever talks to the `web` service (port `3000`). Nuxt's internal Nitro server proxies every `/api/**` request to `api:5000` over the Docker network, preserving the original `Origin` header. This keeps the HttpOnly refresh-token cookie same-origin from the browser's point of view, regardless of the public hostname the app is served from (e.g. a dynamically generated sandbox domain).
 
@@ -48,25 +49,29 @@ Browser ──▶ web (Nuxt/Nitro, :3000) ──proxy /api/**──▶ api (Expr
 .
 ├── docker-compose.yaml
 ├── README.md
-├── jwtRefreshToken-be/        # Express API
+├── k8s/                              # Kubernetes manifests (see "Deploying to Kubernetes" below)
+│   ├── README.md
+│   ├── kustomization.yaml
+│   └── 00-namespace.yaml … 07-ingress.yaml
+├── jwt-project-manager-rbac/         # Express API
 │   ├── Dockerfile
 │   ├── .dockerignore
 │   ├── .env.example
-│   ├── models/                # Mongoose schemas: User, Role, Direction, Department, Project, RefreshToken
-│   ├── routes/                # auth, profile, meta, admin, projects
-│   ├── middleware/             # auth (JWT), rbac (role/permission checks)
-│   ├── scripts/seed.js        # Seeds default roles/directions/departments + an Admin account
-│   └── API.md                 # Full REST API reference
-└── jwtRefreshToken-fe/        # Nuxt 4 frontend
+│   ├── models/                       # Mongoose schemas: User, Role, Direction, Department, Project, RefreshToken
+│   ├── routes/                       # auth, profile, meta, admin, projects
+│   ├── middleware/                    # auth (JWT), rbac (role/permission checks)
+│   ├── scripts/seed.js               # Seeds default roles/directions/departments + an Admin account
+│   └── API.md                        # Full REST API reference
+└── nuxt-express-rbac/                # Nuxt 4 frontend
     ├── Dockerfile
     ├── .dockerignore
     ├── .env.example
-    ├── app/pages/              # /, /login, /register, /profile, /projects, /admin, ...
-    ├── app/composables/        # useAuth, useApi, useMeta, useProjects, useAdmin
-    └── nuxt.config.ts          # routeRules proxying /api/** to the api service
+    ├── app/pages/                     # /, /login, /register, /profile, /projects, /admin, ...
+    ├── app/composables/               # useAuth, useApi, useMeta, useProjects, useAdmin
+    └── nuxt.config.ts                # routeRules proxying /api/** to the api service
 ```
 
-> **Note:** if you extracted the backend/frontend from separate archives, make sure the resulting folders are named exactly `jwtRefreshToken-be` and `jwtRefreshToken-fe` at the repository root (matching the `build.context` paths in `docker-compose.yaml`), or update those paths accordingly.
+> **Note:** if you extracted the backend/frontend from separate archives, make sure the resulting folders are named exactly `jwt-project-manager-rbac` and `nuxt-express-rbac` at the repository root (matching the `build.context` paths in `docker-compose.yaml`), or update those paths accordingly.
 
 ## Quick Start
 
@@ -184,12 +189,37 @@ docker compose down -v
 docker compose up -d --build
 ```
 
+## Deploying to Kubernetes
+
+The [`k8s/`](./k8s) directory contains plain manifests (and a `kustomize` bundle) that deploy the same four services as `docker-compose.yaml` — `mongo`, `mailhog`, `api`, and `web` — behind an Ingress. Full instructions (building/pushing images, secrets, applying the manifests, verifying the rollout) are in [`k8s/README.md`](./k8s/README.md).
+
+This stack has been validated end-to-end on a [Killercoda](https://killercoda.com/) Kubernetes playground. Killercoda's single-node lab VMs need a couple of one-time tweaks before `k8s/README.md`'s steps will work, because by default the API server rejects NodePorts below `30000` and no Ingress controller is installed:
+
+```bash
+# A. Widen the allowed NodePort range to include port 3000
+sed -i '/- --service-cluster-ip-range/a \    - --service-node-port-range=3000-32767' /etc/kubernetes/manifests/kube-apiserver.yaml
+# Wait ~20s for the Kubernetes API server to restart after the static pod manifest changes
+sleep 20
+
+# B. Install the ingress-nginx controller (bare-metal manifest — no cloud load balancer available)
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/baremetal/deploy.yaml
+kubectl rollout status deployment/ingress-nginx-controller -n ingress-nginx
+
+# C. Pin the ingress-nginx Service's http port to NodePort 3000, matching the
+#    port Killercoda exposes/proxies for you in its lab UI
+kubectl patch svc ingress-nginx-controller -n ingress-nginx -p '{"spec": {"ports": [{"name": "http", "port": 80, "protocol": "TCP", "targetPort": "http", "nodePort": 3000}]}}'
+```
+
+Once this is done, follow `k8s/README.md` as usual (build/push or `kind`/`minikube`-load the images, create the namespace and secrets, `kubectl apply -k k8s/`). With the Ingress controller now listening on NodePort `3000`, the app becomes reachable through whichever hostname/port Killercoda exposes for that node port — no `kubectl port-forward` needed.
+
+> These three steps are specific to Killercoda's single-node, no-cloud-LB sandbox. On a managed cluster (EKS/GKE/AKS) or a local one with its own Ingress support (kind with the [extra port mappings](https://kind.sigs.k8s.io/docs/user/ingress/), minikube with `minikube tunnel`), skip them and follow `k8s/README.md` directly.
+
 ## Troubleshooting
 
 **`nuxt: Permission denied` (or similar) during `docker compose build`:**
-Almost always caused by a local `node_modules` folder (installed on your host OS) being picked up by the build context and overwriting the one installed fresh inside the Linux container. Make sure `.dockerignore` is present in both `jwtRefreshToken-be/` and `jwtRefreshToken-fe/` (it is, by default, in this repository), delete any local `node_modules` folders, then rebuild with `--no-cache`:
+Almost always caused by a local `node_modules` folder (installed on your host OS) being picked up by the build context and overwriting the one installed fresh inside the Linux container. Make sure `.dockerignore` is present in both `jwt-project-manager-rbac/` and `nuxt-express-rbac/` (it is, by default, in this repository), delete any local `node_modules` folders, then rebuild with `--no-cache`:
 ```bash
-rm -rf jwtRefreshToken-be/node_modules jwtRefreshToken-fe/node_modules
+rm -rf jwt-project-manager-rbac/node_modules nuxt-express-rbac/node_modules
 docker compose build --no-cache
 ```
 
@@ -204,4 +234,4 @@ They shouldn't — `scripts/seed.js` only inserts data that doesn't already exis
 
 ## API Reference
 
-The full REST API — every route, required permissions, and example payloads — is documented in [`jwtRefreshToken-be/API.md`](./jwtRefreshToken-be/API.md).
+The full REST API — every route, required permissions, and example payloads — is documented in [`jwt-project-manager-rbac/API.md`](./jwt-project-manager-rbac/API.md).

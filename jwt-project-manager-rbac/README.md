@@ -162,13 +162,13 @@ Generate New Access Token
 ### Clone the repository
 
 ```bash
-git clone https://github.com/your-username/jwtRefreshToken-be.git
+git clone https://github.com/dk-saber/team-projects-rbac.git
 ```
 
 ### Navigate to the project
 
 ```bash
-cd jwtRefreshToken-be
+cd jwt-project-manager-rbac
 ```
 
 ### Install dependencies

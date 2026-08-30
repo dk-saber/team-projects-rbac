@@ -1,0 +1,79 @@
+# Horizontal Pod Autoscalers for `api` and `web`.
+#
+# These rely on CPU-utilization metrics served by the Kubernetes Metrics
+# Server (metrics.k8s.io API), which is NOT part of a default cluster install
+# and must be deployed separately — see the "Metrics Server & HPA" section in
+# README.md. Until metrics-server is running and reporting pod metrics, both
+# HPAs will sit at their minReplicas with a CURRENT column showing
+# "<unknown>/60%" in `kubectl get hpa`.
+#
+# Utilization is computed against the containers' `resources.requests.cpu`
+# in 05-api.yaml / 06-web.yaml (100m each) — that request is the denominator
+# HPA uses, so changing it changes what "60%" means in practice.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: api
+  namespace: projecttrack-rbac
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: api
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60
+  behavior:
+    # Scale up fast, scale down cautiously — avoids flapping when a short
+    # CPU spike (e.g. the load-test sidecar below) ends.
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Pods
+          value: 2
+          periodSeconds: 30
+    scaleDown:
+      stabilizationWindowSeconds: 120
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: web
+  namespace: projecttrack-rbac
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: web
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Pods
+          value: 2
+          periodSeconds: 30
+    scaleDown:
+      stabilizationWindowSeconds: 120
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60
