@@ -23,7 +23,7 @@ This means the backend **must** be reachable at the DNS name `api` on port `5000
 
 ## 3. Build and push the images
 
-Images are pushed to Docker Hub under the `saberdk` account. `05-api.yaml` and `06-web.yaml` already reference `saberdk/projecttrack-rbac-api:latest` and `saberdk/projecttrack-rbac-web:latest` — no placeholder to edit.
+Images are pushed to Docker Hub under the `saberdk` account. `05-api.yaml` and `06-web.yaml` already reference `saberdk/projecttrack-rbac-api:v1.0` and `saberdk/projecttrack-rbac-web:v1.0` — no placeholder to edit.
 
 From the repository root:
 
@@ -31,37 +31,25 @@ From the repository root:
 docker login
 
 # Backend
-docker build -t saberdk/projecttrack-rbac-api:latest ./jwt-project-manager-rbac
-docker push saberdk/projecttrack-rbac-api:latest
+docker build -t saberdk/projecttrack-rbac-api:v1.0 ./jwt-project-manager-rbac
+docker push saberdk/projecttrack-rbac-api:v1.0
 
 # Frontend — the --build-arg is required: it must stay "/api" so the refresh
 # token cookie remains same-origin once deployed (see README.md § Architecture).
-docker build --build-arg NUXT_PUBLIC_API_BASE=/api -t saberdk/projecttrack-rbac-web:latest ./nuxt-express-rbac
-docker push saberdk/projecttrack-rbac-web:latest
-```
-
-Use a versioned tag (e.g. `:v1.0.0`) alongside `:latest` once you need to roll back to a specific build — `latest` alone makes that harder to track.
-
-If the Docker Hub repositories are private, create an `imagePullSecret` and reference it from both Deployments (`spec.template.spec.imagePullSecrets`):
-
-```bash
-kubectl create secret docker-registry dockerhub-creds \
-  --namespace projecttrack-rbac \
-  --docker-username=saberdk \
-  --docker-password='<your Docker Hub access token>' \
-  --docker-email='<your email>'
+docker build --build-arg NUXT_PUBLIC_API_BASE=/api -t saberdk/projecttrack-rbac-web:v1.0 ./nuxt-express-rbac
+docker push saberdk/projecttrack-rbac-web:v1.0
 ```
 
 **Using a local cluster (kind / minikube) instead, without pushing to Docker Hub:**
 
 ```bash
 # kind
-kind load docker-image saberdk/projecttrack-rbac-api:latest
-kind load docker-image saberdk/projecttrack-rbac-web:latest
+kind load docker-image saberdk/projecttrack-rbac-api:v1.0
+kind load docker-image saberdk/projecttrack-rbac-web:v1.0
 
 # minikube
-minikube image load saberdk/projecttrack-rbac-api:latest
-minikube image load saberdk/projecttrack-rbac-web:latest
+minikube image load saberdk/projecttrack-rbac-api:v1.0
+minikube image load saberdk/projecttrack-rbac-web:v1.0
 ```
 
 ## 4. Configure secrets
