@@ -33,7 +33,7 @@ spec:
       # de pod (y compris lors d'un scale-up) est donc sans danger.
       initContainers:
         - name: seed
-          image: saberdk/projecttrack-rbac-api:latest
+          image: saberdk/projecttrack-rbac-api:v1.0
           command: ["node", "scripts/seed.js"]
           envFrom:
             - configMapRef:
@@ -42,7 +42,7 @@ spec:
                 name: api-secrets
       containers:
         - name: api
-          image: saberdk/projecttrack-rbac-api:latest
+          image: saberdk/projecttrack-rbac-api:v1.0
           ports:
             - containerPort: 5000
           envFrom:
