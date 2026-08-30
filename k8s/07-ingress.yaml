@@ -1,21 +1,22 @@
-# Requires an Ingress controller running in the cluster (e.g. ingress-nginx).
-# Only the "web" service needs to be exposed: it proxies /api/** to "api"
-# internally (see nuxt.config.ts), so a single host is enough for the whole app.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: projecttrack-rbac
+  name: projecttrack-ingress
   namespace: projecttrack-rbac
   annotations:
-    nginx.ingress.kubernetes.io/proxy-body-size: "5m"
-    # Uncomment if using cert-manager for automatic TLS certificates:
-    # cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
 spec:
   ingressClassName: nginx
   rules:
-    - host: projecttrack.example.com # TODO: replace with your real domain
-      http:
+    - http:
         paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: api
+                port:
+                  number: 5000
           - path: /
             pathType: Prefix
             backend:
@@ -23,31 +24,3 @@ spec:
                 name: web
                 port:
                   number: 3000
-  # tls:
-  #   - hosts:
-  #       - projecttrack.example.com
-  #     secretName: projecttrack-rbac-tls
-
----
-# Optional: expose MailHog's web UI too, for inspecting password-reset emails
-# in a shared/staging cluster. Skip or remove entirely in production —
-# MailHog has no authentication and should never be reachable from the internet
-# in a real deployment (use a real SMTP provider instead, see README.md).
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: mailhog-ui
-  namespace: projecttrack-rbac
-spec:
-  ingressClassName: nginx
-  rules:
-    - host: mailhog.projecttrack.example.com # TODO: replace, or delete this Ingress
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: mailhog
-                port:
-                  number: 8025
