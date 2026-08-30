@@ -29,7 +29,7 @@ spec:
     spec:
       containers:
         - name: web
-          image: saberdk/projecttrack-rbac-web:latest
+          image: saberdk/projecttrack-rbac-web:v1.0
           ports:
             - containerPort: 3000
           env:
