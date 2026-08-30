@@ -9,11 +9,11 @@ Authentication is built on short-lived JWT access tokens paired with rotating, H
 - [Architecture](#architecture)
 - [Prerequisites](#prerequisites)
 - [Project Structure](#project-structure)
-- [Quick Start](#quick-start)
+- [Quick Start (Docker Compose)](#quick-start-docker-compose)
+- [Kubernetes Deployment (Killercoda)](#kubernetes-deployment-killercoda)
 - [Services & Ports](#services--ports)
 - [Environment Variables](#environment-variables)
 - [Default Admin Account](#default-admin-account)
-- [Common Operations](#common-operations)
 - [Troubleshooting](#troubleshooting)
 - [API Reference](#api-reference)
 
@@ -25,8 +25,8 @@ The stack is composed of five services, all orchestrated by a single `docker-com
 |-----------|-----------------------------|-----------------------------------------------------------|
 | `mongo`   | `mongo:7`                   | Primary database (users, roles, directions, departments, projects, refresh tokens) |
 | `mailhog` | `mailhog/mailhog`           | Local fake SMTP server — captures password-reset emails without sending them anywhere, viewable at `http://localhost:8025` |
-| `api`     | Built from `./jwtRefreshToken-be` | Express REST API — auth, RBAC, projects, admin console backend |
-| `web`     | Built from `./jwtRefreshToken-fe` | Nuxt 4 frontend — server-rendered, proxies `/api/**` to the `api` service internally |
+| `api`     | Built from `./jwt-project-manager-rbac` | Express REST API — auth, RBAC, projects, admin console backend |
+| `web`     | Built from `./nuxt-express-rbac` | Nuxt 4 frontend — server-rendered, proxies `/api/**` to the `api` service internally |
 
 Browser traffic only ever talks to the `web` service (port `3000`). Nuxt's internal Nitro server proxies every `/api/**` request to `api:5000` over the Docker network, preserving the original `Origin` header. This keeps the HttpOnly refresh-token cookie same-origin from the browser's point of view, regardless of the public hostname the app is served from (e.g. a dynamically generated sandbox domain).
 
@@ -38,8 +38,8 @@ Browser ──▶ web (Nuxt/Nitro, :3000) ──proxy /api/**──▶ api (Expr
 
 ## Prerequisites
 
-- [Docker](https://docs.docker.com/get-docker/) (Engine 20.10+)
-- [Docker Compose v2](https://docs.docker.com/compose/install/) (the `docker compose` command, bundled with recent Docker Desktop installs)
+- [Docker](https://docs.docker.com/get-docker/) (Engine 20.10+) or a **Kubernetes cluster** (Killercoda / Minikube).
+- `kubectl` CLI (for Kubernetes deployments).
 - No local Node.js, MongoDB, or SMTP setup is required — everything runs in containers.
 
 ## Project Structure
@@ -66,7 +66,7 @@ Browser ──▶ web (Nuxt/Nitro, :3000) ──proxy /api/**──▶ api (Expr
     └── nuxt.config.ts          # routeRules proxying /api/** to the api service
 ```
 
-> **Note:** if you extracted the backend/frontend from separate archives, make sure the resulting folders are named exactly `jwtRefreshToken-be` and `jwtRefreshToken-fe` at the repository root (matching the `build.context` paths in `docker-compose.yaml`), or update those paths accordingly.
+> **Note:** if you extracted the backend/frontend from separate archives, make sure the resulting folders are named exactly `jwt-project-manager-rbac` and `jnuxt-express-rbac` at the repository root (matching the `build.context` paths in `docker-compose.yaml`), or update those paths accordingly.
 
 ## Quick Start
 
