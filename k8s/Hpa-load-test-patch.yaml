@@ -1,0 +1,35 @@
+# Strategic-merge patch — NOT part of `kubectl apply -k k8s/`, applied manually
+# and temporarily. See README.md § "Testing the HPA with a load sidecar".
+#
+# It adds a `load` sidecar container to the `api` Deployment's pod template.
+# `stress` burns one CPU core for 600s and then exits on its own; the
+# container itself keeps running (stress's own process ends, kubelet does not
+# restart the whole pod for that), so the CPU spike is self-limiting even if
+# you forget to remove the patch.
+#
+# HPA measures a pod's CPU utilization as the SUM of all its containers'
+# usage against the SUM of their `resources.requests.cpu`. Adding this
+# sidecar therefore raises the `api` pods' measured utilization directly,
+# without needing to script any external HTTP traffic against the app.
+#
+# Apply:
+#   kubectl patch deployment api -n projecttrack-rbac --patch-file=k8s/hpa-load-test-patch.yaml
+#
+# Remove (restores the original pod template — see README for the caveat
+# about `kubectl apply` vs `kubectl create`):
+#   kubectl apply -f k8s/05-api.yaml
+spec:
+  template:
+    spec:
+      containers:
+        - name: load
+          image: polinux/stress
+          command: ["stress"]
+          args: ["--cpu", "1", "--timeout", "600s"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 300m
+              memory: 64Mi
