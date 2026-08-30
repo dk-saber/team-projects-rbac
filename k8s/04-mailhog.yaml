@@ -34,6 +34,9 @@ spec:
       containers:
         - name: mailhog
           image: mailhog/mailhog
+          env:
+            - name: MH_UI_WEB_PATH
+              value: "mailhog"
           ports:
             - containerPort: 1025
             - containerPort: 8025
