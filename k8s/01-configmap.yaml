@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-config
+  namespace: projecttrack-rbac
+data:
+  PORT: "5000"
+  NODE_ENV: "production"
+
+# In cluster mode, ideally restrict to the actual public origin of the frontend
+# rather than "*" (see README.md — this "*" was tolerated locally because all
+# browser traffic goes through the "web" service, never directly through the "api").
+  CORS_ORIGIN: "*"
+
+  MONGO_URI: "mongodb://mongo:27017/jwt-refresh-demo"
+
+  JWT_EXPIRES_IN: "15m"
+  REFRESH_TOKEN_TTL_SEC: "604800"
+
+  FRONTEND_URL: "http://localhost:3000"
+  PASSWORD_RESET_TTL_SEC: "900"
+
+  SMTP_HOST: "mailhog"
+  SMTP_PORT: "1025"
+  SMTP_SECURE: "false"
+  MAIL_FROM: "no-reply@example.com"
+
+# Role automatically assigned upon public registration (see routes/auth.js)
+  DEFAULT_REGISTRATION_ROLE: "Dev"

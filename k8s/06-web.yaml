@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  namespace: projecttrack-rbac
+  labels:
+    app: web
+spec:
+  selector:
+    app: web
+  ports:
+    - port: 3000
+      targetPort: 3000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: projecttrack-rbac
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+        - name: web
+          image: saberdk/projecttrack-rbac-web:latest
+          ports:
+            - containerPort: 3000
+          env:
+            # Doit rester "/api" : c'est ce qui permet au cookie HttpOnly du
+            # refresh token de rester same-origin (voir README.md § Architecture).
+            # La cible réelle ("http://api:5000/api/**") est définie dans
+            # nuxt.config.ts (routeRules) et résout via le Service "api" ci-dessus,
+            # qui doit impérativement s'appeler "api" (DNS interne au namespace).
+            - name: NUXT_PUBLIC_API_BASE
+              value: "/api"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
