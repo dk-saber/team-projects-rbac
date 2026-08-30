@@ -24,3 +24,10 @@ spec:
                 name: web
                 port:
                   number: 3000
+          - path: /mailhog
+            pathType: Prefix
+            backend:
+              service:
+                name: mailhog
+                port:
+                  number: 8025
