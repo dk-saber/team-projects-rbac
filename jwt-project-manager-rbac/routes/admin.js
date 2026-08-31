@@ -10,7 +10,7 @@ const RefreshToken = require('../models/refreshToken');
 
 const router = express.Router();
 
-// Toutes les routes ci-dessous nécessitent d'être connecté ET d'avoir le rôle Admin.
+// All routes below require the user to be authenticated and to have the Admin role.
 router.use(auth, authorizeRoles('Admin'));
 
 const USER_POPULATE = [
@@ -48,9 +48,9 @@ router.get('/users/:id', async (req, res) => {
 });
 
 /**
- * CRÉATION d'un utilisateur depuis la console admin.
- * Contrairement à /api/auth/register (public), un Admin peut ici choisir
- * directement le rôle, la direction et le département de l'utilisateur.
+ * USER CREATION from the admin console.
+ * Unlike `/api/auth/register` (public), an Admin can directly choose
+ * the user's role, directorate, and department here.
  */
 router.post('/users', async (req, res) => {
   try {
@@ -74,9 +74,9 @@ router.post('/users', async (req, res) => {
       Direction.findOne({ _id: direction, isActive: true }),
       Department.findOne({ _id: department, isActive: true })
     ]);
-    if (!roleDoc) return res.status(400).json({ message: 'Rôle invalide ou inactif' });
-    if (!directionDoc) return res.status(400).json({ message: 'Direction invalide ou inactive' });
-    if (!departmentDoc) return res.status(400).json({ message: 'Département invalide ou inactif' });
+    if (!roleDoc) return res.status(400).json({ message: 'Invalid or inactive role.' });
+    if (!directionDoc) return res.status(400).json({ message: 'Invalid or inactive Direction.' });
+    if (!departmentDoc) return res.status(400).json({ message: 'Invalid or inactive Department.' });
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -95,7 +95,7 @@ router.post('/users', async (req, res) => {
     const populated = await user.populate(USER_POPULATE);
     const { password: _pw, ...userSafe } = populated.toObject();
 
-    res.status(201).json({ message: 'Utilisateur créé', user: userSafe });
+    res.status(201).json({ message: 'User created', user: userSafe });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
@@ -103,9 +103,9 @@ router.post('/users', async (req, res) => {
 });
 
 /**
- * MODIFICATION d'un utilisateur (infos générales, hors mot de passe et rôle).
- * Le changement de rôle reste sur sa route dédiée (PUT /users/:id/role)
- * pour garder une trace explicite de cette action sensible.
+ * USER UPDATE (general information only, excluding password and role).
+ * Role changes remain on their dedicated route (PUT /users/:id/role)
+ * to maintain an explicit audit trail for this sensitive action.
  */
 router.put('/users/:id', async (req, res) => {
   try {
@@ -130,13 +130,13 @@ router.put('/users/:id', async (req, res) => {
 
     if (direction !== undefined) {
       const directionDoc = await Direction.findOne({ _id: direction, isActive: true });
-      if (!directionDoc) return res.status(400).json({ message: 'Direction invalide ou inactive' });
+      if (!directionDoc) return res.status(400).json({ message: 'Invalid or inactive Direction.' });
       update.direction = directionDoc._id;
     }
 
     if (department !== undefined) {
       const departmentDoc = await Department.findOne({ _id: department, isActive: true });
-      if (!departmentDoc) return res.status(400).json({ message: 'Département invalide ou inactif' });
+      if (!departmentDoc) return res.status(400).json({ message: 'Invalid or inactive Department.' });
       update.department = departmentDoc._id;
     }
 
@@ -147,9 +147,9 @@ router.put('/users/:id', async (req, res) => {
       .select('-password')
       .populate(USER_POPULATE);
 
-    if (!user) return res.status(404).json({ message: 'Utilisateur introuvable' });
+    if (!user) return res.status(404).json({ message: 'User not found.' });
 
-    res.json({ message: 'Utilisateur mis à jour', user });
+    res.json({ message: 'User updated successfully.', user });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
@@ -157,22 +157,22 @@ router.put('/users/:id', async (req, res) => {
 });
 
 /**
- * SUPPRESSION d'un utilisateur.
- * Soft delete par défaut (isActive: false) pour préserver l'historique
- * (projets créés, appartenance à des équipes, etc.) et bloquer sa connexion.
- * Un DELETE avec ?hard=true supprime réellement le document.
+ * USER DELETION.
+ * Soft delete is used by default (`isActive: false`) to preserve historical data
+ * (created projects, team memberships, etc.) while preventing the user from logging in.
+ * A DELETE request with `?hard=true` permanently removes the document.
  */
 router.delete('/users/:id', async (req, res) => {
   try {
     if (req.user.id === req.params.id) {
-      return res.status(400).json({ message: 'Vous ne pouvez pas supprimer votre propre compte' });
+      return res.status(400).json({ message: 'You cannot delete your own account.' });
     }
 
     if (req.query.hard === 'true') {
       const user = await User.findByIdAndDelete(req.params.id);
-      if (!user) return res.status(404).json({ message: 'Utilisateur introuvable' });
+      if (!user) return res.status(404).json({ message: 'User not found.' });
       await RefreshToken.deleteMany({ user: user._id });
-      return res.json({ message: 'Utilisateur supprimé définitivement' });
+      return res.json({ message: 'User permanently deleted.' });
     }
 
     const user = await User.findByIdAndUpdate(
@@ -181,15 +181,15 @@ router.delete('/users/:id', async (req, res) => {
       { new: true }
     ).select('-password').populate(USER_POPULATE);
 
-    if (!user) return res.status(404).json({ message: 'Utilisateur introuvable' });
+    if (!user) return res.status(404).json({ message: 'User not found.' });
 
-    // Révoque ses sessions actives pour que la désactivation soit immédiate.
+// Revokes the user's active sessions so that deactivation takes effect immediately.
     await RefreshToken.updateMany(
       { user: user._id, revokedAt: null },
       { revokedAt: new Date() }
     );
 
-    res.json({ message: 'Utilisateur désactivé', user });
+    res.json({ message: 'User deactivated.', user });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
@@ -197,20 +197,20 @@ router.delete('/users/:id', async (req, res) => {
 });
 
 /**
- * Changement de rôle d'un utilisateur.
- * C'est la SEULE façon de faire évoluer le rôle d'un compte
- * (l'inscription publique impose toujours un rôle par défaut).
+ * Changes a user's role.
+ * This is the ONLY way to modify an account's role
+ * (public registration always assigns a default role).
  */
 router.put('/users/:id/role', async (req, res) => {
   try {
     const { role } = req.body;
     if (!role) {
-      return res.status(400).json({ message: 'Le champ "role" (id) est requis' });
+      return res.status(400).json({ message: 'The "role" field (ID) is required.' });
     }
 
     const roleDoc = await Role.findOne({ _id: role, isActive: true });
     if (!roleDoc) {
-      return res.status(400).json({ message: 'Rôle invalide ou inactif' });
+      return res.status(400).json({ message: 'Invalid or inactive role.' });
     }
 
     const user = await User.findByIdAndUpdate(
@@ -222,15 +222,14 @@ router.put('/users/:id/role', async (req, res) => {
       .populate(USER_POPULATE);
 
     if (!user) {
-      return res.status(404).json({ message: 'Utilisateur introuvable' });
+      return res.status(404).json({ message: 'User not found.' });
     }
 
-    // Remarque : les tokens déjà émis pour cet utilisateur gardent l'ancien
-    // rôle jusqu'à expiration/refresh (le rôle est embarqué dans le JWT).
-    // Pour une prise d'effet immédiate, il faudrait aussi révoquer ses
-    // refresh tokens actifs (RefreshToken.updateMany) afin de le forcer
-    // à se reconnecter.
-    res.json({ message: 'Rôle mis à jour', user });
+    // Note: tokens already issued for this user will retain the previous
+    // role until they expire or are refreshed (the role is embedded in the JWT).
+    // For immediate effect, the user's active refresh tokens should also be
+    // revoked (RefreshToken.updateMany) to force them to sign in again.
+    res.json({ message: 'Role updated successfully.', user });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
@@ -253,13 +252,13 @@ router.post('/roles', async (req, res) => {
   try {
     const { name, label, description, permissions } = req.body;
     if (!name) {
-      return res.status(400).json({ message: 'Le champ "name" est requis' });
+      return res.status(400).json({ message: 'The "name" field is required.' });
     }
     const role = await Role.create({ name, label, description, permissions });
     res.status(201).json({ role });
   } catch (err) {
     if (err.code === 11000) {
-      return res.status(400).json({ message: 'Ce rôle existe déjà' });
+      return res.status(400).json({ message: 'This role already exists.' });
     }
     console.error(err);
     res.status(500).json({ message: 'Server error' });
@@ -274,7 +273,7 @@ router.put('/roles/:id', async (req, res) => {
       { label, description, permissions, isActive },
       { new: true, runValidators: true }
     );
-    if (!role) return res.status(404).json({ message: 'Rôle introuvable' });
+    if (!role) return res.status(404).json({ message: 'Role not found.' });
     res.json({ role });
   } catch (err) {
     console.error(err);
@@ -283,14 +282,14 @@ router.put('/roles/:id', async (req, res) => {
 });
 
 router.delete('/roles/:id', async (req, res) => {
-  // Désactivation plutôt que suppression : évite de casser les comptes existants.
+// Deactivate instead of deleting: prevents breaking existing user accounts.
   const role = await Role.findByIdAndUpdate(
     req.params.id,
     { isActive: false },
     { new: true }
   );
-  if (!role) return res.status(404).json({ message: 'Rôle introuvable' });
-  res.json({ message: 'Rôle désactivé', role });
+  if (!role) return res.status(404).json({ message: 'Role not found.' });
+  res.json({ message: 'Role deactivated.', role });
 });
 
 /* --------------------------- DIRECTIONS --------------------------- */
@@ -309,13 +308,13 @@ router.post('/directions', async (req, res) => {
   try {
     const { name, label, description } = req.body;
     if (!name) {
-      return res.status(400).json({ message: 'Le champ "name" est requis' });
+      return res.status(400).json({ message: 'The "name" field is required.' });
     }
     const direction = await Direction.create({ name, label, description });
     res.status(201).json({ direction });
   } catch (err) {
     if (err.code === 11000) {
-      return res.status(400).json({ message: 'Cette direction existe déjà' });
+      return res.status(400).json({ message: 'This directorate already exists.' });
     }
     console.error(err);
     res.status(500).json({ message: 'Server error' });
@@ -330,7 +329,7 @@ router.put('/directions/:id', async (req, res) => {
       { label, description, isActive },
       { new: true, runValidators: true }
     );
-    if (!direction) return res.status(404).json({ message: 'Direction introuvable' });
+    if (!direction) return res.status(404).json({ message: 'Direction not found.' });
     res.json({ direction });
   } catch (err) {
     console.error(err);
@@ -344,8 +343,8 @@ router.delete('/directions/:id', async (req, res) => {
     { isActive: false },
     { new: true }
   );
-  if (!direction) return res.status(404).json({ message: 'Direction introuvable' });
-  res.json({ message: 'Direction désactivée', direction });
+  if (!direction) return res.status(404).json({ message: 'Direction not found.' });
+  res.json({ message: 'Direction deactivated', direction });
 });
 
 /* -------------------------- DEPARTMENTS -------------------------- */
@@ -364,13 +363,13 @@ router.post('/departments', async (req, res) => {
   try {
     const { name, label, description, direction } = req.body;
     if (!name) {
-      return res.status(400).json({ message: 'Le champ "name" est requis' });
+      return res.status(400).json({ message: 'The "name" field is required.' });
     }
     const department = await Department.create({ name, label, description, direction: direction || null });
     res.status(201).json({ department });
   } catch (err) {
     if (err.code === 11000) {
-      return res.status(400).json({ message: 'Ce département existe déjà' });
+      return res.status(400).json({ message: 'This department already exists.' });
     }
     console.error(err);
     res.status(500).json({ message: 'Server error' });
@@ -385,7 +384,7 @@ router.put('/departments/:id', async (req, res) => {
       { label, description, direction, isActive },
       { new: true, runValidators: true }
     );
-    if (!department) return res.status(404).json({ message: 'Département introuvable' });
+    if (!department) return res.status(404).json({ message: 'Department not found.' });
     res.json({ department });
   } catch (err) {
     console.error(err);
@@ -399,8 +398,8 @@ router.delete('/departments/:id', async (req, res) => {
     { isActive: false },
     { new: true }
   );
-  if (!department) return res.status(404).json({ message: 'Département introuvable' });
-  res.json({ message: 'Département désactivé', department });
+  if (!department) return res.status(404).json({ message: 'Department not found.' });
+  res.json({ message: 'Department deactivated.', department });
 });
 
 module.exports = router;
