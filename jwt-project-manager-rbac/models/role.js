@@ -2,9 +2,9 @@ const mongoose = require('mongoose');
 
 /**
  * Role
- * Collection évolutive : on peut ajouter/désactiver un rôle
- * sans toucher au code (Admin, Dev, Test, Ops, Devops, ...).
- */
+ * Extensible collection: roles can be added or disabled
+ * without modifying the code (Admin, Dev, Test, Ops, DevOps, ...).
+*/
 const roleSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -20,8 +20,8 @@ const roleSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
-  // Permissions logiques rattachées au rôle (utilisées par le middleware RBAC
-  // pour des contrôles fins, ex: 'project:create', 'project:delete', 'user:manage')
+// Logical permissions associated with the role (used by the RBAC middleware
+// for fine-grained access control, e.g. 'project:create', 'project:delete', 'user:manage')
   permissions: {
     type: [String],
     default: []
