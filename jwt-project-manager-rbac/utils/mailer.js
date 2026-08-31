@@ -1,7 +1,7 @@
 const nodemailer = require('nodemailer');
 
-// Le transporteur est configuré via variables d'environnement (SMTP_*).
-// En dev, on peut pointer vers Mailtrap / Ethereal / Mailhog.
+// The transporter is configured through environment variables (SMTP_*).
+// In development, it can point to Mailtrap, Ethereal, or MailHog.
 let transporter = null;
 
 function getTransporter() {
@@ -10,7 +10,7 @@ function getTransporter() {
   transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT) || 587,
-    secure: process.env.SMTP_SECURE === 'true', // true pour le port 465, false pour les autres
+    secure: process.env.SMTP_SECURE === 'true', // Use `true` for port 465 (SMTPS), and `false` for all other ports.
     auth: process.env.SMTP_USER
       ? {
           user: process.env.SMTP_USER,
@@ -26,21 +26,21 @@ async function sendPasswordResetEmail({ to, resetUrl }) {
   const from = process.env.MAIL_FROM || 'no-reply@example.com';
 
   const text =
-    `Vous avez demandé la réinitialisation de votre mot de passe.\n\n` +
-    `Ce lien est valable 15 minutes et ne peut être utilisé qu'une seule fois :\n${resetUrl}\n\n` +
-    `Si vous n'êtes pas à l'origine de cette demande, ignorez simplement cet e-mail.`;
+    `You requested a password reset.\n\n` +
+    `This link is valid for 15 minutes and can only be used once :\n${resetUrl}\n\n` +
+    `If you did not make this request, simply ignore this email.`;
 
   const html = `
-    <p>Vous avez demandé la réinitialisation de votre mot de passe.</p>
-    <p>Ce lien est valable <strong>15 minutes</strong> et ne peut être utilisé qu'une seule fois :</p>
+    <p>You requested a password reset.</p>
+    <p>This link is valid for <strong>15 minutes</strong> and can only be used once :</p>
     <p><a href="${resetUrl}">${resetUrl}</a></p>
-    <p>Si vous n'êtes pas à l'origine de cette demande, ignorez simplement cet e-mail.</p>
+    <p>If you did not make this request, simply ignore this email.</p>
   `;
 
   await getTransporter().sendMail({
     from,
     to,
-    subject: 'Réinitialisation de votre mot de passe',
+    subject: 'Password Reset Request',
     text,
     html
   });
