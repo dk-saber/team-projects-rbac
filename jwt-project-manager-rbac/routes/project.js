@@ -6,7 +6,7 @@ const Project = require('../models/project');
 
 const router = express.Router();
 
-// Toutes les routes projets nécessitent d'être authentifié.
+// All project routes require authentication.
 router.use(auth);
 
 function isValidObjectId(id) {
@@ -14,8 +14,8 @@ function isValidObjectId(id) {
 }
 
 /**
- * LISTE des projets.
- * Accessible à tout utilisateur connecté (lecture).
+ * LIST of projects.
+ * Accessible to any authenticated user (read access).
  */
 router.get('/', async (req, res) => {
   try {
@@ -34,12 +34,12 @@ router.get('/', async (req, res) => {
 });
 
 /**
- * DÉTAIL d'un projet.
+ * PROJECT DETAILS.
  */
 router.get('/:id', async (req, res) => {
   try {
     if (!isValidObjectId(req.params.id)) {
-      return res.status(400).json({ message: 'Identifiant de projet invalide' });
+      return res.status(400).json({ message: 'Invalid project ID.' });
     }
 
     const project = await Project.findOne({ _id: req.params.id, isArchived: false })
@@ -49,7 +49,7 @@ router.get('/:id', async (req, res) => {
       .populate('members', 'username name lastname');
 
     if (!project) {
-      return res.status(404).json({ message: 'Projet introuvable' });
+      return res.status(404).json({ message: 'Project not found' });
     }
 
     res.json({ project });
@@ -60,9 +60,9 @@ router.get('/:id', async (req, res) => {
 });
 
 /**
- * CRÉATION d'un projet.
- * Réservé aux rôles disposant de la permission 'project:create'
- * (par défaut : Admin, Devops — voir scripts/seed.js).
+ * PROJECT CREATION.
+ * Restricted to roles that have the 'project:create' permission
+ * (by default: Admin and DevOps — see `scripts/seed.js`).
  */
 router.post(
   '/',
@@ -72,7 +72,7 @@ router.post(
       const { name, description, status, startDate, endDate, direction, department, members } = req.body;
 
       if (!name) {
-        return res.status(400).json({ message: 'Le nom du projet est requis' });
+        return res.status(400).json({ message: 'Project name is required.' });
       }
 
       const project = await Project.create({
@@ -103,17 +103,18 @@ router.post(
 );
 
 /**
- * MODIFICATION d'un projet.
- * Réservé aux rôles disposant de la permission 'project:update'
- * (par défaut : Admin, Devops, Dev — voir scripts/seed.js).
+ * PROJECT UPDATE.
+ * Restricted to roles that have the 'project:update' permission
+ * (by default: Admin, DevOps, and Dev — see `scripts/seed.js`).
  */
+
 router.put(
   '/:id',
   authorizePermissions('project:update'),
   async (req, res) => {
     try {
       if (!isValidObjectId(req.params.id)) {
-        return res.status(400).json({ message: 'Identifiant de projet invalide' });
+        return res.status(400).json({ message: 'The provided project ID is invalid.' });
       }
 
       const {
@@ -148,10 +149,10 @@ router.put(
         .populate('members', 'username name lastname');
 
       if (!project) {
-        return res.status(404).json({ message: 'Projet introuvable' });
+        return res.status(404).json({ message: 'Project not found' });
       }
 
-      res.json({ message: 'Projet mis à jour', project });
+      res.json({ message: 'Project updated successfully.', project });
     } catch (err) {
       console.error(err);
       res.status(500).json({ message: 'Server error' });
@@ -160,11 +161,11 @@ router.put(
 );
 
 /**
- * SUPPRESSION d'un projet.
- * Réservé aux rôles disposant de la permission 'project:delete'
- * (par défaut : Admin — voir scripts/seed.js).
- * On archive (soft delete) plutôt que de supprimer réellement,
- * afin de conserver l'historique.
+ * PROJECT DELETION.
+ * Restricted to roles that have the 'project:delete' permission
+ * (by default: Admin — see `scripts/seed.js`).
+ * Projects are archived (soft delete) rather than permanently deleted
+ * in order to preserve historical records.
  */
 router.delete(
   '/:id',
@@ -172,7 +173,7 @@ router.delete(
   async (req, res) => {
     try {
       if (!isValidObjectId(req.params.id)) {
-        return res.status(400).json({ message: 'Identifiant de projet invalide' });
+        return res.status(400).json({ message: 'Invalid project ID' });
       }
 
       const project = await Project.findByIdAndUpdate(
@@ -182,10 +183,10 @@ router.delete(
       );
 
       if (!project) {
-        return res.status(404).json({ message: 'Projet introuvable' });
+        return res.status(404).json({ message: 'Project not found.' });
       }
 
-      res.json({ message: 'Projet supprimé (archivé)' });
+      res.json({ message: 'Project deleted (archived).' });
     } catch (err) {
       console.error(err);
       res.status(500).json({ message: 'Server error' });

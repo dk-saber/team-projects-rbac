@@ -6,12 +6,12 @@ const Department = require('../models/department');
 const router = express.Router();
 
 /**
- * Ces routes sont volontairement PUBLIQUES (pas de middleware `auth`) :
- * le frontend en a besoin pour peupler les listes déroulantes
- * (rôle / direction / département) au moment de la création de compte,
- * avant que l'utilisateur ne soit authentifié.
+ * These routes are intentionally PUBLIC (no `auth` middleware):
+ * the frontend needs them to populate dropdown lists
+ * (role / direction / department) during account creation,
+ * before the user is authenticated.
  *
- * Seuls les éléments actifs (isActive: true) sont renvoyés.
+ * Only active items (`isActive: true`) are returned.
  */
 
 router.get('/roles', async (req, res) => {

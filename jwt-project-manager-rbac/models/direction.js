@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 /**
  * Direction
- * Collection évolutive (Dir1, Dir2, Dir3, ...).
+ * Extensible collection (Dir1, Dir2, Dir3, ...).
  */
 const directionSchema = new mongoose.Schema({
   name: {

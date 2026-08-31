@@ -10,8 +10,8 @@ const passwordResetTokenSchema = new mongoose.Schema({
   userAgent: String
 });
 
-// TTL index: MongoDB supprime automatiquement le document une fois expiresAt dépassé.
-// Nettoyage automatique de la collection, aucun cron nécessaire.
+// TTL index: MongoDB automatically deletes the document once `expiresAt` has passed.
+// Automatic collection cleanup, no cron job required.
 passwordResetTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 module.exports = mongoose.model('PasswordResetToken', passwordResetTokenSchema);

@@ -8,7 +8,7 @@ const ACCESS_TTL = process.env.JWT_EXPIRES_IN || '15m';
 const REFRESH_TTL_SEC =
   Number(process.env.REFRESH_TOKEN_TTL_SEC) || 604800; 
 
-// Durée de vie très courte pour les jetons de reset password : 15 minutes
+// Very short lifetime for password reset tokens: 15 minutes.
 const PASSWORD_RESET_TTL_SEC =
   Number(process.env.PASSWORD_RESET_TTL_SEC) || 15 * 60;
 
@@ -26,9 +26,9 @@ function createJti() {
 }
 
 /**
- * Construit le payload RBAC de l'access token.
- * `user` doit être populate() sur role / direction / department
- * (voir routes/auth.js) pour que les noms et permissions soient disponibles.
+ * Builds the RBAC payload for the access token.
+ * `user` must be populated (`populate()`) with role / direction / department
+ * (see `routes/auth.js`) so that names and permissions are available.
  */
 function signAccessToken(user) {
 
@@ -149,14 +149,14 @@ async function rotateRefreshToken(
 }
 
 /**
- * Génère un jeton de réinitialisation de mot de passe (aléatoire, opaque),
- * le persiste sous forme hashée en base avec une expiration de 15 min,
- * et retourne le jeton EN CLAIR (à insérer dans le lien envoyé par e-mail).
- * Le jeton en clair n'est jamais stocké : seule sa version hashée l'est.
+ * Generates a password reset token (random and opaque),
+ * stores its hashed version in the database with a 15-minute expiration,
+ * and returns the PLAINTEXT token (to be included in the reset link sent by email).
+ * The plaintext token is never stored; only its hashed version is persisted.
  */
 async function createPasswordResetToken({ user, ip, userAgent }) {
 
-  // Jeton aléatoire cryptographiquement sûr, imprévisible (contrairement à un UUID)
+  // Cryptographically secure random token, unpredictable (unlike a UUID).
   const rawToken = crypto.randomBytes(32).toString('hex');
 
   const tokenHash = hashToken(rawToken);
@@ -165,8 +165,8 @@ async function createPasswordResetToken({ user, ip, userAgent }) {
     Date.now() + PASSWORD_RESET_TTL_SEC * 1000
   );
 
-  // On invalide tout jeton de reset encore actif pour cet utilisateur :
-  // un seul jeton valide à la fois.
+  // Invalidate any still-active password reset token for this user:
+  // only one valid token is allowed at a time.
   await PasswordResetToken.deleteMany({
     user: user._id,
     usedAt: null
@@ -184,11 +184,11 @@ async function createPasswordResetToken({ user, ip, userAgent }) {
 }
 
 /**
- * Vérifie un jeton de reset password reçu en clair :
- * - existe en base (via son hash)
- * - non expiré
- * - non déjà utilisé (usage unique)
- * Retourne le document si valide, sinon null.
+ * Verifies a plaintext password reset token:
+ * - exists in the database (via its hash)
+ * - has not expired
+ * - has not already been used (single-use token)
+ * Returns the document if valid, otherwise null.
  */
 async function verifyPasswordResetToken(rawToken) {
 

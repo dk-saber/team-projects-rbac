@@ -38,13 +38,13 @@ router.post('/register', async (req, res) => {
       username,
       email,
       password,
-      direction, // _id renvoyé par GET /api/meta/directions
-      department // _id renvoyé par GET /api/meta/departments
+      direction, // `_id` returned by GET /api/meta/directions
+      department // `_id` returned by GET /api/meta/departments
     } = req.body;
 
     if (!direction || !department) {
       return res.status(400).json({
-        message: 'direction et department sont requis'
+        message: 'Direction and department are required.'
       });
     }
 
@@ -64,10 +64,10 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Sécurité : le rôle n'est JAMAIS pris depuis le body de la requête
-    // publique (sinon n'importe qui pourrait s'auto-promouvoir "Admin").
-    // Un rôle par défaut est assigné à l'inscription ; c'est ensuite
-    // un Admin qui pourra le faire évoluer via PUT /api/admin/users/:id/role.
+// Security: the role is NEVER taken from the public request body
+// (otherwise anyone could promote themselves to "Admin").
+// A default role is assigned at registration time; afterwards,
+// an Admin can change it via PUT /api/admin/users/:id/role.
     const defaultRoleName = process.env.DEFAULT_REGISTRATION_ROLE || 'Dev';
 
     const [roleDoc, directionDoc, departmentDoc] = await Promise.all([
@@ -78,14 +78,14 @@ router.post('/register', async (req, res) => {
 
     if (!roleDoc) {
       return res.status(500).json({
-        message: `Rôle par défaut "${defaultRoleName}" introuvable ou inactif. Lancez le seed ou vérifiez DEFAULT_REGISTRATION_ROLE.`
+        message: `Default role "${defaultRoleName}" not found or inactive. Run the seed script or check DEFAULT_REGISTRATION_ROLE.`
       });
     }
     if (!directionDoc) {
-      return res.status(400).json({ message: 'Direction invalide ou inactive' });
+      return res.status(400).json({ message: 'Invalid or inactive direction.' });
     }
     if (!departmentDoc) {
-      return res.status(400).json({ message: 'Département invalide ou inactif' });
+      return res.status(400).json({ message: 'Invalid or inactive department.' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -138,7 +138,7 @@ router.post('/login', loginLimiter, async (req, res) => {
 
     if (user.isActive === false) {
       return res.status(403).json({
-        message: 'Ce compte a été désactivé. Contactez un administrateur.'
+        message: 'This account has been deactivated. Please contact an administrator.'
       });
     }
 
@@ -266,26 +266,26 @@ router.post('/logout', async (req, res) => {
 
 /**
  * FORGOT PASSWORD
- * Génère un jeton à usage unique (15 min) et l'envoie par e-mail.
- * Répond toujours de la même façon, que l'email existe ou non,
- * pour ne pas permettre l'énumération des comptes.
+ * Generates a single-use token (valid for 15 minutes) and sends it by email.
+ * Always returns the same response, whether the email exists or not,
+ * to prevent account enumeration.
  */
 router.post('/forgot-password', forgotPasswordLimiter, async (req, res) => {
   try {
     const { email } = req.body;
 
     if (!email) {
-      return res.status(400).json({ message: 'Email requis' });
+      return res.status(400).json({ message: 'Email is required.' });
     }
 
     const genericResponse = {
-      message: 'Si un compte existe avec cet e-mail, un lien de réinitialisation a été envoyé.'
+      message: 'If an account exists for this email address, a password reset link has been sent.'
     };
 
     const user = await User.findOne({ email });
 
     if (!user) {
-      // Même réponse que si l'utilisateur existait, pour éviter l'énumération d'emails
+      // Same response as if the user existed, to prevent email enumeration.
       return res.status(200).json(genericResponse);
     }
 
@@ -302,7 +302,7 @@ router.post('/forgot-password', forgotPasswordLimiter, async (req, res) => {
       await sendPasswordResetEmail({ to: user.email, resetUrl });
     } catch (mailErr) {
       // On log l'erreur d'envoi mais on ne la révèle pas au client
-      console.error('Erreur envoi email reset password:', mailErr);
+      console.error('Error sending password reset email:', mailErr);
     }
 
     return res.status(200).json(genericResponse);
@@ -315,20 +315,20 @@ router.post('/forgot-password', forgotPasswordLimiter, async (req, res) => {
 
 /**
  * RESET PASSWORD
- * Vérifie le jeton (hash, expiration 15 min, usage unique),
- * met à jour le mot de passe et invalide le jeton + les refresh tokens actifs.
+ * Verifies the token (hash validation, 15-minute expiration, single use),
+ * updates the password, and invalidates both the token and any active refresh tokens.
  */
 router.post('/reset-password', resetPasswordLimiter, async (req, res) => {
   try {
     const { token, newPassword } = req.body;
 
     if (!token || !newPassword) {
-      return res.status(400).json({ message: 'Jeton et nouveau mot de passe requis' });
+      return res.status(400).json({ message: 'Token and new password are required.' });
     }
 
     if (newPassword.length < 8) {
       return res.status(400).json({
-        message: 'Le mot de passe doit contenir au moins 8 caractères'
+        message: 'Password must be at least 8 characters long.'
       });
     }
 
@@ -336,7 +336,7 @@ router.post('/reset-password', resetPasswordLimiter, async (req, res) => {
 
     if (!doc) {
       return res.status(400).json({
-        message: 'Lien de réinitialisation invalide ou expiré'
+        message: 'Invalid or expired password reset link.'
       });
     }
 
@@ -346,24 +346,24 @@ router.post('/reset-password', resetPasswordLimiter, async (req, res) => {
     user.password = hashedPassword;
     await user.save();
 
-    // Usage unique : on marque le jeton comme utilisé
+    // Single-use token: mark the token as used.
     doc.usedAt = new Date();
     await doc.save();
 
-    // Par sécurité, on invalide tous les autres jetons de reset actifs
+    // For security reasons, invalidate all other active password reset tokens.
     await PasswordResetToken.deleteMany({
       user: user._id,
       _id: { $ne: doc._id }
     });
 
-    // Et on révoque toutes les sessions actives (refresh tokens),
-    // au cas où le mot de passe a été compromis
+    // Also revoke all active sessions (refresh tokens),
+    // in case the password has been compromised.
     await RefreshToken.updateMany(
       { user: user._id, revokedAt: null },
       { $set: { revokedAt: new Date() } }
     );
 
-    return res.status(200).json({ message: 'Mot de passe réinitialisé avec succès' });
+    return res.status(200).json({ message: 'Your password has been reset successfully.' });
 
   } catch (err) {
     console.error(err);

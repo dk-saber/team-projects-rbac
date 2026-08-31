@@ -1,9 +1,9 @@
 const rateLimit = require('express-rate-limit');
 
 /**
- * Limite les demandes de réinitialisation de mot de passe par IP :
- * évite le spam d'e-mails et le "user enumeration" par force brute.
- * 5 requêtes / 15 min / IP, alignée sur la durée de vie du jeton.
+ * Limits password reset requests per IP:
+ * prevents email spam and brute-force user enumeration attacks.
+ * 5 requests per 15 minutes per IP, aligned with the token lifetime.
  */
 const forgotPasswordLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -11,14 +11,14 @@ const forgotPasswordLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: {
-    message: 'Trop de demandes de réinitialisation. Veuillez réessayer plus tard.'
+    message: 'Too many password reset requests. Please try again later.'
   }
 });
 
 /**
- * Limite les tentatives de soumission du nouveau mot de passe par IP :
- * ralentit le brute-force sur le jeton lui-même (32 octets aléatoires,
- * donc déjà quasi impossible à deviner, mais on ajoute une couche).
+ * Limits new password submission attempts per IP:
+ * slows down brute-force attacks against the token itself (32 random bytes,
+ * making it already virtually impossible to guess, but this adds an extra layer of protection).
  */
 const resetPasswordLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -26,13 +26,14 @@ const resetPasswordLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: {
-    message: 'Trop de tentatives. Veuillez réessayer plus tard.'
+    message: 'Too many password reset requests. Please try again later.'
   }
 });
 
 /**
- * Limite les tentatives de connexion par IP : protège contre le brute-force
- * sur les mots de passe des comptes existants.
+ * Limits login attempts per IP:
+ * protects against brute-force attacks targeting the passwords
+ * of existing user accounts.
  */
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -40,7 +41,7 @@ const loginLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: {
-    message: 'Trop de tentatives de connexion. Veuillez réessayer plus tard.'
+    message: 'Too many password reset requests. Please try again later.'
   }
 });
 

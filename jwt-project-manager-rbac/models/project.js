@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 /**
  * Project
- * Entité principale du suivi de projets.
+ * Main entity for project tracking.
  */
 const projectSchema = new mongoose.Schema({
   name: {
@@ -36,13 +36,13 @@ const projectSchema = new mongoose.Schema({
     ref: 'Department',
     default: null
   },
-  // Créateur du projet (rempli automatiquement depuis req.user)
+  // // Project creator (automatically populated from `req.user`)
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
-  // Membres affectés au projet
+  // Members assigned to the project
   members: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'

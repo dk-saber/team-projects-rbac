@@ -2,9 +2,9 @@ const mongoose = require('mongoose');
 
 /**
  * Department
- * Collection évolutive (Dep1, Dep2, Dep3, ...).
- * Rattaché optionnellement à une Direction pour une future
- * hiérarchie organisationnelle (facultatif, non requis).
+ * Extensible collection (Dep1, Dep2, Dep3, ...).
+ * Optionally linked to a Directorate for a future
+ * organizational hierarchy (optional, not required).
  */
 const departmentSchema = new mongoose.Schema({
   name: {
