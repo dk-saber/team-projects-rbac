@@ -1,28 +1,28 @@
 /**
- * Middlewares RBAC (Role-Based Access Control).
+ * RBAC (Role-Based Access Control) middleware.
  *
- * Ces middlewares s'appuient sur req.user, injecté par le middleware `auth`
- * (voir middleware/auth.js), qui contient au minimum :
+ * These middleware functions rely on `req.user`, which is populated by the
+ * `auth` middleware (see `middleware/auth.js`) and contains at least:
  *   { id, username, role, permissions, direction, department }
  *
- * Le rôle et les permissions sont embarqués dans l'access token au moment
- * du login (voir utils/tokens.js -> signAccessToken), donc aucun accès
- * base de données n'est nécessaire pour un contrôle d'accès classique.
+ * The role and permissions are embedded in the access token at login time
+ * (see `utils/tokens.js` -> `signAccessToken`), so no database access is
+ * required for standard authorization checks.
  */
 
 /**
- * authorizeRoles('Admin', 'Devops')
- * Autorise uniquement les utilisateurs dont le rôle fait partie de la liste.
+ * authorizeRoles('Admin', 'DevOps')
+ * Allows only users whose role is included in the specified list.
  */
 function authorizeRoles(...allowedRoles) {
   return (req, res, next) => {
     if (!req.user) {
-      return res.status(401).json({ message: 'Non authentifié' });
+      return res.status(401).json({ message: 'Not authenticated.' });
     }
 
     if (!allowedRoles.includes(req.user.role)) {
       return res.status(403).json({
-        message: 'Accès refusé : rôle insuffisant'
+        message: 'Access denied: insufficient role.'
       });
     }
 
@@ -32,14 +32,14 @@ function authorizeRoles(...allowedRoles) {
 
 /**
  * authorizePermissions('project:create', 'project:delete')
- * Autorise si l'utilisateur possède AU MOINS UNE des permissions listées.
- * Les permissions sont définies au niveau du Role (voir models/role.js)
- * et embarquées dans le token à la connexion.
+ * Grants access if the user has AT LEAST ONE of the specified permissions.
+ * Permissions are defined at the Role level (see `models/role.js`)
+ * and embedded in the token at login time.
  */
 function authorizePermissions(...requiredPermissions) {
   return (req, res, next) => {
     if (!req.user) {
-      return res.status(401).json({ message: 'Non authentifié' });
+      return res.status(401).json({ message: 'Not authenticated.' });
     }
 
     const userPermissions = req.user.permissions || [];
@@ -52,7 +52,7 @@ function authorizePermissions(...requiredPermissions) {
 
     if (!hasPermission) {
       return res.status(403).json({
-        message: 'Accès refusé : permission insuffisante'
+        message: 'Access denied: insufficient permission.'
       });
     }
 
