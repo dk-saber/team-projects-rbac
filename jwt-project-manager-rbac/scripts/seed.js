@@ -1,8 +1,8 @@
 /**
- * Script de seed : initialise les collections Role / Direction / Department
- * avec les valeurs de base, et crée un compte Admin si aucun n'existe.
+ * Seed script: initializes the Role, Directorate, and Department collections
+ * with their default values, and creates an Admin account if none exists.
  *
- * Usage : npm run seed
+ * Usage: npm run seed
  */
 require('dotenv').config();
 const bcrypt = require('bcryptjs');
@@ -14,10 +14,10 @@ const Department = require('../models/department');
 const User = require('../models/user');
 
 const ROLES = [
-  { name: 'Admin', label: 'Administrateur', permissions: ['*'] },
-  { name: 'Dev', label: 'Développeur', permissions: ['project:read', 'project:update'] },
-  { name: 'Test', label: 'Testeur', permissions: ['project:read'] },
-  { name: 'Ops', label: 'Opérations', permissions: ['project:read'] },
+  { name: 'Admin', label: 'Administrator', permissions: ['*'] },
+  { name: 'Dev', label: 'Développer', permissions: ['project:read', 'project:update'] },
+  { name: 'Test', label: 'Tester', permissions: ['project:read'] },
+  { name: 'Ops', label: 'Operations', permissions: ['project:read'] },
   { name: 'Devops', label: 'DevOps', permissions: ['project:read', 'project:create', 'project:update', 'project:delete', 'project:deploy'] }
 ];
 
@@ -69,7 +69,7 @@ async function run() {
     departmentDocs[name] = await upsertDepartment(name);
   }
 
-  // Crée un compte Admin par défaut s'il n'en existe aucun.
+  // Creates a default Admin account if none exists.
   const adminExists = await User.findOne({ role: roleDocs['Admin']._id });
   if (!adminExists) {
     const defaultPassword = process.env.SEED_ADMIN_PASSWORD || 'ChangeMe123!';
@@ -87,19 +87,19 @@ async function run() {
     });
 
     console.log(
-      `Compte Admin créé -> email: ${process.env.SEED_ADMIN_EMAIL || 'admin@example.com'} / mot de passe: ${defaultPassword}`
+      `Admin account created -> email: ${process.env.SEED_ADMIN_EMAIL || 'admin@example.com'} / password: ${defaultPassword}`
     );
-    console.log('⚠️  Pensez à changer ce mot de passe immédiatement.');
+    console.log('Make sure to change this password immediately..');
   } else {
-    console.log('Un compte Admin existe déjà, aucun compte créé.');
+    console.log('An Admin account already exists, so no new account was created..');
   }
 
-  console.log('Seed terminé.');
+  console.log('Seed completed.');
   await mongoose.disconnect();
   process.exit(0);
 }
 
 run().catch((err) => {
-  console.error('Erreur pendant le seed :', err);
+  console.error('An error occurred during the seed process :', err);
   process.exit(1);
 });
